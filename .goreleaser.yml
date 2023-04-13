@@ -17,6 +17,21 @@ builds:
   - -s -w -extldflags "-static" -X github.com/shipwright-io/cli/pkg/shp/cmd/version.version={{.Version}}
   main: ./cmd/shp/main.go
   binary: shp
+- env:
+    - CGO_ENABLED=0
+  goos:
+    - linux
+    - darwin
+    - windows
+  goarch:
+    - amd64
+    - arm64
+  flags:
+    - -trimpath
+  ldflags:
+    - -s -w -extldflags "-static" -X github.com/shipwright-io/cli/pkg/shp/cmd/version.version={{.Version}}
+  main: ./cmd/shp/main.go
+  binary: kubectl-shp
 archives:
 - replacements:
     darwin: macOS
