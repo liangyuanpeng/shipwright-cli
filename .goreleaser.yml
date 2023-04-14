@@ -1,3 +1,4 @@
+project_name: shp
 before:
   hooks:
   - go generate ./...
@@ -17,6 +18,7 @@ builds:
   - -s -w -extldflags "-static" -X github.com/shipwright-io/cli/pkg/shp/cmd/version.version={{.Version}}
   main: ./cmd/shp/main.go
   binary: shp
+  id: shp
 - env:
     - CGO_ENABLED=0
   goos:
@@ -32,10 +34,33 @@ builds:
     - -s -w -extldflags "-static" -X github.com/shipwright-io/cli/pkg/shp/cmd/version.version={{.Version}}
   main: ./cmd/shp/main.go
   binary: kubectl-shp
+  id: kubectl-shp
 archives:
-- replacements:
-    darwin: macOS
-    amd64: x86_64
+- id: "shp"
+#  replacements:
+#    darwin: macOS
+#    amd64: x86_64
+#  name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+  name_template: >-
+    {{ .ProjectName }}_{{ .Tag }}_
+    {{- if eq .Os "darwin" }}macOS_
+    {{- else }}{{ .Os }}_{{ end }}
+    {{- if eq .Arch "amd64" }}x86_64
+    {{- else }}{{ .Arch }}{{ end }}
+  builds:
+    - shp
+- id: "kubectl-shp"
+#  replacements:
+#    darwin: macOS
+#    amd64: x86_64
+  name_template: >-
+    kubectl-{{ .ProjectName }}_{{ .Tag }}_
+    {{- if eq .Os "darwin" }}macOS_
+    {{- else }}{{ .Os }}_{{ end }}
+    {{- if eq .Arch "amd64" }}x86_64
+    {{- else }}{{ .Arch }}{{ end }}
+  builds:
+    - kubectl-shp
 checksum:
   name_template: 'checksums.txt'
 snapshot:
