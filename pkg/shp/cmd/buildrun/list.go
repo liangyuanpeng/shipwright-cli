@@ -2,6 +2,7 @@ package buildrun
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -59,8 +60,8 @@ func (c *ListCommand) Run(params *params.Params, _ *genericclioptions.IOStreams)
 	//       find out more in kubectl libraries and use them
 
 	writer := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	columnNames := "NAME\tSTATUS\tAGE"
-	columnTemplate := "%s\t%s\t%s\n"
+	columnNames := "NAME\tSTATUS\tAGE\tSOURCE\tOUTPUT-IMAGE\tIMAGE-DIGEST\tSOURCE-ORIGIN"
+	columnTemplate := "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
 
 	clientset, err := params.ShipwrightClientSet()
 	if err != nil {
@@ -85,9 +86,20 @@ func (c *ListCommand) Run(params *params.Params, _ *genericclioptions.IOStreams)
 				break
 			}
 		}
+
+		log.Println("br:", br)
+
+		outputImage := "none"
+		if br.Spec.Output != nil {
+			outputImage = br.Spec.Output.Image
+		}
+		log.Println("source:", *br.Spec.BuildSpec.Source.URL, *br.Spec.BuildSpec.Source.Revision)
+		// br.Spec.BuildSpec.Source.URL
+		// br.Spec.BuildSpec.Source.Revision
+
 		age := duration.ShortHumanDuration(time.Since((br.ObjectMeta.CreationTimestamp).Time))
 
-		fmt.Fprintf(writer, columnTemplate, name, status, age)
+		fmt.Fprintf(writer, columnTemplate, name, status, age, "test", outputImage, "test", "test")
 	}
 
 	writer.Flush()
