@@ -1,6 +1,7 @@
 package buildrun
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -87,19 +88,51 @@ func (c *ListCommand) Run(params *params.Params, _ *genericclioptions.IOStreams)
 			}
 		}
 
-		log.Println("br:", br)
+		log.Println("br:", br.Name, br.Spec.BuildName())
 
-		outputImage := "none"
+		outputImage := ""
 		if br.Spec.Output != nil {
 			outputImage = br.Spec.Output.Image
 		}
-		log.Println("source:", *br.Spec.BuildSpec.Source.URL, *br.Spec.BuildSpec.Source.Revision)
+
+		sourceUrl := ""
+		sourceRevision := ""
+
+		builds := br.Spec.BuildSpec
+		if builds == nil {
+			build, err := clientset.ShipwrightV1alpha1().Builds("default").Get(context.TODO(), br.Spec.BuildRef.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			sourceUrl = *build.Spec.Source.URL
+			if build.Spec.Source.Revision != nil {
+				sourceRevision = *build.Spec.Source.Revision
+			}
+		} else {
+			sourceUrl = *builds.Source.URL
+			sourceRevision = *builds.Source.URL
+		}
+
+		if sourceUrl == "" {
+			sourceUrl = sourceRevision
+		}
+
+		// log.Println("source==nil", &br.Spec.BuildSpec.Source == nil)
+
+		// log.Println("source:", *br.Spec.BuildSpec.Source.URL, *br.Spec.BuildSpec.Source.Revision)
+
+		// log.Println("source:", *&br.Spec.BuildSpec.Source)
+
 		// br.Spec.BuildSpec.Source.URL
 		// br.Spec.BuildSpec.Source.Revision
 
+		//TODO  get output-digest
+		// br.Spec.Output.Image
+		// br.Spec.Output.Annotations
+
 		age := duration.ShortHumanDuration(time.Since((br.ObjectMeta.CreationTimestamp).Time))
 
-		fmt.Fprintf(writer, columnTemplate, name, status, age, "test", outputImage, "test", "test")
+		fmt.Fprintf(writer, columnTemplate, name, status, age, sourceUrl, outputImage, "output-digest", "source-origin")
 	}
 
 	writer.Flush()
