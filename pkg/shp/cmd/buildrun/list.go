@@ -1,7 +1,6 @@
 package buildrun
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -78,6 +77,8 @@ func (c *ListCommand) Run(params *params.Params, _ *genericclioptions.IOStreams)
 		fmt.Fprintln(writer, columnNames)
 	}
 
+	//lan https://github.worker.liangyuanpeng.com/shipwright-io/cli/issues/117
+
 	for _, br := range brs.Items {
 		name := br.Name
 		status := string(metav1.ConditionUnknown)
@@ -91,30 +92,33 @@ func (c *ListCommand) Run(params *params.Params, _ *genericclioptions.IOStreams)
 		log.Println("br:", br.Name, br.Spec.BuildName())
 
 		outputImage := ""
-		if br.Spec.Output != nil {
-			outputImage = br.Spec.Output.Image
-		}
 
 		sourceUrl := ""
 		sourceRevision := ""
+		outputDigest := ""
 
-		builds := br.Spec.BuildSpec
-		if builds == nil {
-			build, err := clientset.ShipwrightV1alpha1().Builds("default").Get(context.TODO(), br.Spec.BuildRef.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			sourceUrl = *build.Spec.Source.URL
-			if build.Spec.Source.Revision != nil {
-				sourceRevision = *build.Spec.Source.Revision
-			}
-		} else {
-			sourceUrl = *builds.Source.URL
-			sourceRevision = *builds.Source.URL
+		if br.Spec.Output != nil {
+			outputImage = br.Spec.Output.Image
+		} else if br.Status.BuildSpec != nil {
+			outputImage = br.Status.BuildSpec.Output.Image
+
 		}
 
-		if sourceUrl == "" {
-			sourceUrl = sourceRevision
+		if br.Status.BuildSpec != nil {
+			if br.Status.BuildSpec.Source.URL != nil {
+				sourceUrl = *br.Status.BuildSpec.Source.URL
+			}
+			if br.Status.BuildSpec.Source.Revision != nil {
+				sourceRevision = *br.Status.BuildSpec.Source.Revision
+			}
+			log.Println("sourceUrl:", sourceUrl)
+			if sourceUrl == "" {
+				sourceUrl = sourceRevision
+			}
+		}
+
+		if br.Status.Output != nil {
+			outputDigest = br.Status.Output.Digest
 		}
 
 		// log.Println("source==nil", &br.Spec.BuildSpec.Source == nil)
@@ -132,7 +136,7 @@ func (c *ListCommand) Run(params *params.Params, _ *genericclioptions.IOStreams)
 
 		age := duration.ShortHumanDuration(time.Since((br.ObjectMeta.CreationTimestamp).Time))
 
-		fmt.Fprintf(writer, columnTemplate, name, status, age, sourceUrl, outputImage, "output-digest", "source-origin")
+		fmt.Fprintf(writer, columnTemplate, name, status, age, sourceUrl, outputImage, outputDigest, "source-origin")
 	}
 
 	writer.Flush()
